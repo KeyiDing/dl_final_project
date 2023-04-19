@@ -101,7 +101,7 @@ class PoseNet(torch.nn.Module):
 		self.linear1 = torch.nn.Linear(in_features=122880, out_features=512)
 		self.linear2 = torch.nn.Linear(in_features=512, out_features=128)
 		self.linear3 = torch.nn.Linear(in_features=128, out_features=64)
-		self.linear4 = torch.nn.Linear(in_features=64, out_features=16)
+		self.linear4 = torch.nn.Linear(in_features=64, out_features=6)
   		
 	def forward(self, x):
 			x = self.encoder(x)
@@ -109,8 +109,6 @@ class PoseNet(torch.nn.Module):
 			x = self.linear2(x)
 			x = self.linear3(x)
 			x = self.linear4(x)
-			print(x.shape)
-			x = torch.reshape(x,(x.shape[0],4,4))
 
 			return x
 
