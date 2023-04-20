@@ -32,17 +32,11 @@ class Encoder(torch.nn.Module):
 		Output: Feature Maps: (B, 512, H//32, W//32)
 		"""
 		x = self.conv1(x)
-		print(x.shape)
 		x = self.conv2(x)
-		print(x.shape)
 		x = self.conv3(x)
-		print(x.shape)
 		x = self.conv4(x)
-		print(x.shape)
 		x = self.conv5(x)
-		print(x.shape)
 		x = self.conv6(x)
-		print(x.shape)
 
 		return x
 	
@@ -63,19 +57,12 @@ class Decoder(torch.nn.Module):
 		Output: Feature Maps: (B, 1, H, W)
 		"""
 		x = self.conv1(x)
-		print(x.shape)
 		x = self.conv2(x)
-		print(x.shape)
 		x = self.conv3(x)
-		print(x.shape)
 		x = self.conv4(x)
-		print(x.shape)
 		x = self.conv5(x)
-		print(x.shape)
 		x = self.conv6(x)
-		print(x.shape)
 		x = self.out(x)
-		print(x.shape)
 
 		return x
 	
