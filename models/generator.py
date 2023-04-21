@@ -43,12 +43,12 @@ class Encoder(torch.nn.Module):
 class Decoder(torch.nn.Module):
 	def __init__(self) -> None:
 		super().__init__()
-		self.conv1 = up_conv(in_size=1024, out_size=524, padding=1, output_padding=(1,0))
+		self.conv1 = up_conv(in_size=1024, out_size=524, padding=1, output_padding=(0,1))
 		self.conv2 = up_conv(in_size=524, out_size=256, padding=1, output_padding=(1,1))
-		self.conv3 = up_conv(in_size=256, out_size=128, padding=1, output_padding=(0,1))
-		self.conv4 = up_conv(in_size=128, out_size=64, padding=1, output_padding=(1,0))
-		self.conv5 = up_conv(in_size=64, out_size=32, padding=1, output_padding=(1,0))
-		self.conv6 = up_conv(in_size=32, out_size=1, padding=1, output_padding=(0,1))
+		self.conv3 = up_conv(in_size=256, out_size=128, padding=1, output_padding=(1,1))
+		self.conv4 = up_conv(in_size=128, out_size=64, padding=1, output_padding=(1,1))
+		self.conv5 = up_conv(in_size=64, out_size=32, padding=1, output_padding=(1,1))
+		self.conv6 = up_conv(in_size=32, out_size=1, padding=1, output_padding=(1,1))
 		self.out = torch.nn.Sigmoid()
 
 	def forward(self, x):
