@@ -98,12 +98,16 @@ class PoseNet(torch.nn.Module):
 	def __init__(self) -> None:
 		super().__init__()
 		self.encoder = Encoder()
+		self.encoder.conv1 = conv(in_size=9, out_size=32, padding=1)
 		self.linear1 = torch.nn.Linear(in_features=122880, out_features=512)
 		self.linear2 = torch.nn.Linear(in_features=512, out_features=128)
 		self.linear3 = torch.nn.Linear(in_features=128, out_features=64)
 		self.linear4 = torch.nn.Linear(in_features=64, out_features=6)
   		
-	def forward(self, x):
+	def forward(self, left,center,right):
+			x = np.hstack((left,center))
+			x = torch.from_numpy(np.hstack((x,right)))
+			print(x.shape)
 			x = self.encoder(x)
 			x = self.linear1(x.view(x.shape[0], -1))
 			x = self.linear2(x)
