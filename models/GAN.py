@@ -1,9 +1,11 @@
 from generator import DepthNet, PoseNet
 from discriminator import Discriminator
+from torchvision.utils import save_image
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import utils
+
 
  
 class DPGAN(torch.nn.Module):
@@ -24,15 +26,87 @@ class DPGAN(torch.nn.Module):
         reproject_left = utils.reproject_pcd(pcd, extrinsics_left)
         reproject_right = utils.reproject_pcd(pcd, extrinsics_right)
 
-        output_fake_left = self.Discriminator(reproject_left)
-        output_fake_right = self.Discriminator(reproject_right)
+        return reproject_left, reproject_right
+    
+    def train_discriminator(self, optimizer, criterion, reproject, real):
+        optimizer.zero_grad()
+        
+        prob_fake = self.Discriminator(reproject)
+        prob_real = self.Discriminator(real)
 
-        return output_fake_left, output_fake_right
+        loss_real = criterion(prob_real, torch.ones(1))
+
+        loss_fake = criterion(prob_fake, torch.zeros(1))
+
+        loss_real.backward()
+        loss_fake.backward()
+        optimizer.step()
+
+        return loss_real + loss_fake
+    
+    def train_generator(self, optimizer, criterion, reproject):
+        optimizer.zero_grad()
+
+        prob = self.Discriminator(reproject)
+        loss = criterion(prob, torch.ones(1))
+
+        loss.backward()
+        optimizer.step()
+
+        return loss
+
     
     def train(self, train_loader):
-        for i, data in enumerate(train_loader):
-            left, center, right = data[0], data[1], data[2]
-             self()
+        # TODO criterion = 
+        # TODO optimizer = 
+
+        losses_g = []
+        losses_d = []
+
+        for epoch in range(epochs):
+            self.DepthNet.train()
+            self.PoseNet.train()
+            self.Discriminator.train()
+
+            loss_g = 0.0
+            loss_d = 0.0
+            print(f"Training epoch {epoch} of {epochs}")
+
+            for i, data in enumerate(train_loader):
+                left, center, right = data[0], data[1], data[2]
+                
+                for j in range(k):
+                    reproject_left, reproject_right = self(left, center, right)
+
+                    loss_d += self.train_discriminator(optimizer, criterion, reproject_left, left)
+                    loss_d += self.train_discriminator(optimizer, criterion, reproject_right, right)
+                
+                reproject_left, reproject_right = self(left, center, right)
+                loss_g += self.train_generator(optimizer, criterion, reproject_left, reproject_right)
+
+                self.DepthNet.eval()
+
+                depthMap = self.DepthNet(center)
+                save_image(depthMap, f"../output/depthMap_img{epoch}.png")
+
+                epoch_loss_g = loss_g / i
+                epoch_loss_d = loss_d / i
+                losses_g.append(epoch_loss_g)
+                losses_d.append(epoch_loss_d)
+
+                print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
+                print("---------------------------------------------------------")
+
+            torch.save(self.state_dict())
+
+            print("DONE TRAINING")
+
+            return losses_g, losses_d
+
+                
+                
+
+
 
 
 
