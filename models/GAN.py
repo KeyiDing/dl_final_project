@@ -85,7 +85,7 @@ class DPGAN(torch.nn.Module):
             #     left, center, right = data[0], data[1], data[2]
             for i in range(1):
                 print(os.getcwd())
-                left, center, right = Image.open("/images/2.png"), Image.open("/images/1.png"), Image.open("/images/0.png")
+                left, center, right = Image.open("./images/2.png"), Image.open("./images/1.png"), Image.open("./images/0.png")
                 for j in range(k):
                     reproject_left, reproject_right = self(left, center, right)
 
