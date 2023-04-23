@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import utils
+from PIL import Image
 
 
  
@@ -63,8 +64,9 @@ class DPGAN(torch.nn.Module):
         @epochs: Number of training epochs
         """
 
-        # TODO criterion = 
-        # TODO optimizer = 
+        criterion = torch.nn.BCELoss()
+        optimizer_g = torch.optim.Adam(self.DepthNet.parameters()+self.PoseNet.parameters(), lr=1e-3)
+        optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-3)
 
         losses_g = []
         losses_d = []
@@ -78,17 +80,18 @@ class DPGAN(torch.nn.Module):
             loss_d = 0.0
             print(f"Training epoch {epoch} of {epochs}")
 
-            for i, data in enumerate(train_loader):
-                left, center, right = data[0], data[1], data[2]
-                
+            # for i, data in enumerate(train_loader):
+            #     left, center, right = data[0], data[1], data[2]
+            for i in range(1):
+                left, center, right = Image.open("../images/2.png"), Image.open("../images/1.png"), Image.open("../images/0.png")
                 for j in range(k):
                     reproject_left, reproject_right = self(left, center, right)
 
-                    loss_d += self.train_discriminator(optimizer, criterion, reproject_left, left)
-                    loss_d += self.train_discriminator(optimizer, criterion, reproject_right, right)
+                    loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
+                    loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
                 
                 reproject_left, reproject_right = self(left, center, right)
-                loss_g += self.train_generator(optimizer, criterion, reproject_left, reproject_right)
+                loss_g += self.train_generator(optimizer_g, criterion, reproject_left, reproject_right)
 
                 self.DepthNet.eval()
 
