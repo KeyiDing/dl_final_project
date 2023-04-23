@@ -65,7 +65,7 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        optimizer_g = torch.optim.Adam(self.DepthNet.parameters()+self.PoseNet.parameters(), lr=1e-3)
+        optimizer_g = torch.optim.Adam(list(self.DepthNet.parameters())+list(self.PoseNet.parameters()), lr=1e-3)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-3)
 
         losses_g = []
