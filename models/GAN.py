@@ -97,11 +97,11 @@ class DPGAN(torch.nn.Module):
                 print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
                 print("---------------------------------------------------------")
 
-            torch.save(self.state_dict())
+        torch.save(self.state_dict())
 
-            print("DONE TRAINING")
+        print("DONE TRAINING")
 
-            return losses_g, losses_d
+        return losses_g, losses_d
 
                 
                 
