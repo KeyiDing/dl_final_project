@@ -87,6 +87,10 @@ class DPGAN(torch.nn.Module):
             for i in range(1):
                 convert_tensor = transforms.ToTensor()
                 left, center, right = convert_tensor(Image.open("./images/2.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/0.png"))
+                left = left[None,:,:,:]
+                center = center[None,:,:,:]
+                right = right[None,:,:,:]
+                
                 for j in range(k):
                     reproject_left, reproject_right = self(left, center, right)
 
