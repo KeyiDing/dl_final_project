@@ -75,9 +75,7 @@ class DepthNet(torch.nn.Module):
 	
 	def forward(self, x):
 		x = self.encoder(x)
-		print("encoder output shape:", x.shape)
 		x = self.decoder(x)
-		print("decoder output shape:", x.shape)
 
 		return x
 	

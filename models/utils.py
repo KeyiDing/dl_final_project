@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 import open3d as o3d
+from torchvision import transforms
+import torch.utils.dlpack
+import open3d.core as o3c
 
 def depth_rgb_to_pcd(depth, rgb, intrinsics):
     """
@@ -25,7 +28,7 @@ def depth_rgb_to_pcd(depth, rgb, intrinsics):
     return pcd
 
 
-def reproject_pcd(pcd, extrinsics):
+def reproject_pcd(pcd, intrinsics, extrinsics):
     """
     @pcd: o3d.t.geometry.PointCloud
     @extrinsics: camera extrinsics
@@ -35,13 +38,14 @@ def reproject_pcd(pcd, extrinsics):
     """
 
     rgbd_reproj = pcd.project_to_rgbd_image(
-                    1242,
-                    375,
+                    1216,
+                    352,
+                    intrinsics,
                     extrinsics,
                     depth_scale=1.0,
                     depth_max=255.0)
-    
-    return rgbd_reproj
+    convert_tensor = transforms.ToTensor()
+    return convert_tensor(np.asarray(rgbd_reproj.color))[None,:,:,:]
 
 
 def pose_to_extrinsics(pose):
@@ -51,6 +55,8 @@ def pose_to_extrinsics(pose):
     Return:
     Extrinsic matrix
     """
+    pose = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(pose))
+    # pose = pose.detach().numpy().squeeze()
 
     camera_translation = np.array(pose[0:3])
     camera_rotation = np.array(pose[3:6])
@@ -75,6 +81,6 @@ def pose_to_extrinsics(pose):
 
     extrinsic_matrix = np.eye(4)
     extrinsic_matrix[:3, :3] = R
-    extrinsic_matrix[:3, 3] = -camera_position
+    extrinsic_matrix[:3, 3] = -camera_translation
 
     return extrinsic_matrix
