@@ -27,7 +27,7 @@ class DPGAN(torch.nn.Module):
         depthMap = self.DepthNet(center)
         pose_left = self.PoseNet(left, center)    # pose: (1x6)
         pose_right = self.PoseNet(right, center)    # pose: (1x6)
-        pcd = utils.depth_rgb_to_pcd(depthMap, center)
+        pcd = utils.depth_rgb_to_pcd(depthMap, center,self.intrinsics)
         extrinsics_left = utils.pose_to_extrinsics(pose_left)
         extrinsics_right = utils.pose_to_extrinsics(pose_right)
         reproject_left = utils.reproject_pcd(pcd, extrinsics_left)
