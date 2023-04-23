@@ -1,10 +1,10 @@
-from generator import DepthNet, PoseNet
-from discriminator import Discriminator
+from models.generator import DepthNet, PoseNet
+from models.discriminator import Discriminator
 from torchvision.utils import save_image
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import utils
+import models.utils as utils
 from PIL import Image
 import os
 from torchvision import transforms
@@ -24,14 +24,21 @@ class DPGAN(torch.nn.Module):
                                            [0, 0, 1]])
 
     def forward(self, left, center, right):
+        print("depth map start")
         depthMap = self.DepthNet(center)
+        print("depth map finish, pose map start")
         pose_left = self.PoseNet(left, center)    # pose: (1x6)
         pose_right = self.PoseNet(right, center)    # pose: (1x6)
+        print("pose map finish")
+        print(depthMap.shape, center.shape)
         pcd = utils.depth_rgb_to_pcd(depthMap, center,self.intrinsics)
+        print("pcd done")
         extrinsics_left = utils.pose_to_extrinsics(pose_left)
         extrinsics_right = utils.pose_to_extrinsics(pose_right)
+        print("extrinsics done")
         reproject_left = utils.reproject_pcd(pcd, extrinsics_left)
         reproject_right = utils.reproject_pcd(pcd, extrinsics_right)
+        print("forward done")
 
         return reproject_left, reproject_right
     
@@ -97,7 +104,6 @@ class DPGAN(torch.nn.Module):
 
                 for j in range(k):
                     reproject_left, reproject_right = self(left, center, right)
-
                     loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
                     loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
                 
