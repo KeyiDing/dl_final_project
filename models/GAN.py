@@ -8,6 +8,7 @@ import utils
 from PIL import Image
 import os
 from torchvision import transforms
+import open3d as o3d
 
 
  
@@ -18,6 +19,9 @@ class DPGAN(torch.nn.Module):
         self.DepthNet = DepthNet()
         self.PoseNet = PoseNet()
         self.Discriminator = Discriminator()
+        self.intrinsics = o3d.core.Tensor([[721.5377, 0, 596.5593],
+                                           [0, 721.5377, 149.854],
+                                           [0, 0, 1]])
 
     def forward(self, left, center, right):
         depthMap = self.DepthNet(center)
@@ -90,7 +94,7 @@ class DPGAN(torch.nn.Module):
                 left = left[None,:,:,:]
                 center = center[None,:,:,:]
                 right = right[None,:,:,:]
-                
+
                 for j in range(k):
                     reproject_left, reproject_right = self(left, center, right)
 
