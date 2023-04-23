@@ -86,7 +86,7 @@ class PoseNet(torch.nn.Module):
 		super().__init__()
 		self.encoder = Encoder()
 		self.encoder.conv1 = conv(in_size=6, out_size=32, padding=1)
-		self.linear1 = torch.nn.Linear(in_features=122880, out_features=512)
+		self.linear1 = torch.nn.Linear(in_features=116736, out_features=512)
 		self.linear2 = torch.nn.Linear(in_features=512, out_features=128)
 		self.linear3 = torch.nn.Linear(in_features=128, out_features=64)
 		self.linear4 = torch.nn.Linear(in_features=64, out_features=6)
