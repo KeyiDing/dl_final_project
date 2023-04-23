@@ -56,7 +56,12 @@ class DPGAN(torch.nn.Module):
         return loss
 
     
-    def train(self, train_loader):
+    def train(self, train_loader, k):
+        """
+        @train_loader: Training set dataloader
+        @k: Train discriminator k times before train generator once
+        """
+
         # TODO criterion = 
         # TODO optimizer = 
 
