@@ -13,7 +13,7 @@ def depth_rgb_to_pcd(depth, rgb, intrinsics):
     """
     depth = np.transpose(depth.detach().numpy(), (0,2,3,1)) * 255
     depth_img = o3d.t.geometry.Image(depth[0])
-    rgb_img = o3d.t.geometry.Image(rgb.astype(np.float32))
+    rgb_img = o3d.t.geometry.Image(rgb[0].detach().numpy().astype(np.float32))
     rgbd_img = o3d.t.geometry.RGBDImage(rgb_img, depth_img)
     
     pcd = o3d.t.geometry.PointCloud.create_from_rgbd_image(
