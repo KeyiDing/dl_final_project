@@ -56,7 +56,13 @@ class DPGAN(torch.nn.Module):
         return loss
 
     
-    def train(self, train_loader):
+    def train(self, train_loader, k, epochs):
+        """
+        @train_loader: Training set dataloader
+        @k: Train discriminator k times before train generator once
+        @epochs: Number of training epochs
+        """
+
         # TODO criterion = 
         # TODO optimizer = 
 
@@ -97,11 +103,11 @@ class DPGAN(torch.nn.Module):
                 print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
                 print("---------------------------------------------------------")
 
-            torch.save(self.state_dict())
+        torch.save(self.state_dict())
 
-            print("DONE TRAINING")
+        print("DONE TRAINING")
 
-            return losses_g, losses_d
+        return losses_g, losses_d
 
                 
                 
