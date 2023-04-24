@@ -14,17 +14,27 @@ def depth_rgb_to_pcd(depth, rgb, intrinsics):
     Returns:
         o3d.t.geometry.PointCloud: pcd
     """
-    depth = np.transpose(depth.detach().numpy(), (0,2,3,1)) * 255
+    depth = torch.permute(depth,(0,2,3,1))*255
+    depth = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(depth))
+    print(type(depth))
+    # depth = np.transpose(depth, (0,2,3,1)) * 255
+
     depth_img = o3d.t.geometry.Image(depth[0])
-    rgb_img = o3d.t.geometry.Image(np.ascontiguousarray(np.transpose(rgb[0].detach().numpy(), (1,2,0))))
+    print("depth done")
+    # depth_img = o3d.t.geometry.Image(depth[0])
+    # rgb_img = o3d.t.geometry.Image(np.ascontiguousarray(np.transpose(rgb[0].detach().numpy(), (1,2,0))))
+    rgb = torch.permute(rgb[0],(1,2,0))
+    rgb = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(rgb.contiguous()))
+    rgb_img = o3d.t.geometry.Image(rgb)
     rgbd_img = o3d.t.geometry.RGBDImage(rgb_img, depth_img)
+    print("rgbd done")
     
     pcd = o3d.t.geometry.PointCloud.create_from_rgbd_image(
                 rgbd_img,
                 intrinsics,
                 depth_scale=1.0,
                 depth_max=255.0)
-
+    print("pcd done")
     return pcd
 
 
@@ -55,8 +65,9 @@ def pose_to_extrinsics(pose):
     Return:
     Extrinsic matrix
     """
-    pose = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(pose))
+    # pose = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(pose.squeeze()))
     # pose = pose.detach().numpy().squeeze()
+    pose = pose.squeeze()
 
     camera_translation = np.array(pose[0:3])
     camera_rotation = np.array(pose[3:6])
