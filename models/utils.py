@@ -67,30 +67,30 @@ def pose_to_extrinsics(pose):
     """
     # pose = o3c.Tensor.from_dlpack(torch.utils.dlpack.to_dlpack(pose.squeeze()))
     # pose = pose.detach().numpy().squeeze()
-    pose = pose.squeeze()
+    pose = torch.squeeze(pose)
 
-    camera_translation = np.array(pose[0:3])
-    camera_rotation = np.array(pose[3:6])
+    camera_translation = pose[0:3]
+    camera_rotation = pose[3:6]
 
     pitch = camera_rotation[0]
     yaw = camera_rotation[1]
     roll = camera_rotation[2]
 
-    Rx = np.array([[1, 0, 0],
-                [0, np.cos(pitch), -np.sin(pitch)],
-                [0, np.sin(pitch), np.cos(pitch)]])
+    Rx = torch.tensor([[1, 0, 0],
+                       [0, torch.cos(pitch), -torch.sin(pitch)],
+                       [0, torch.sin(pitch), torch.cos(pitch)]])
 
-    Ry = np.array([[np.cos(yaw), 0, np.sin(yaw)],
-                [0, 1, 0],
-                [-np.sin(yaw), 0, np.cos(yaw)]])
+    Ry = torch.tensor([[torch.cos(yaw), 0, torch.sin(yaw)],
+                       [0, 1, 0],
+                       [-torch.sin(yaw), 0, torch.cos(yaw)]])
 
-    Rz = np.array([[np.cos(roll), -np.sin(roll), 0],
-                [np.sin(roll), np.cos(roll), 0],
-                [0, 0, 1]])
+    Rz = torch.tensor([[torch.cos(roll), -torch.torch(roll), 0],
+                       [torch.sin(roll), torch.cos(roll), 0],
+                       [0, 0, 1]])
 
-    R = Rz @ Ry @ Rx
+    R = torch.matmul(torch.matmul(Rz, Ry), Rx)
 
-    extrinsic_matrix = np.eye(4)
+    extrinsic_matrix = torch.eye(4)
     extrinsic_matrix[:3, :3] = R
     extrinsic_matrix[:3, 3] = -camera_translation
 
