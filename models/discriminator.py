@@ -29,6 +29,8 @@ class Discriminator(torch.nn.Module):
         self.sig = torch.nn.Sigmoid()
         
     def forward(self,x):
+        if x.shape[1] != 3:
+            x = x.view(1,3,352,1216)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)

@@ -88,14 +88,18 @@ class PoseNet(torch.nn.Module):
 		self.linear2 = torch.nn.Linear(in_features=512, out_features=128)
 		self.linear3 = torch.nn.Linear(in_features=128, out_features=64)
 		self.linear4 = torch.nn.Linear(in_features=64, out_features=6)
+		self.activation = torch.nn.LeakyReLU()
+		self.activation1 = torch.nn.Tanh()
   		
 	def forward(self, other,center):
-			x = torch.from_numpy(np.hstack((other,center)))
-			x = self.encoder(x)
-			x = self.linear1(x.view(x.shape[0], -1))
-			x = self.linear2(x)
-			x = self.linear3(x)
-			x = self.linear4(x)
+		x = torch.cat([other,center],dim=1)
+		x1 = self.encoder(x)
+		x1 = x1.view(x.shape[0], -1)
+		x2 = self.linear1(x1)
+		x2 = self.activation(x2)
+		x3= self.linear2(x2)
+		x4 = self.linear3(x3)
+		x5 = self.linear4(x4)
 
-			return x
+		return 0.01 * self.activation1(x5)
 
