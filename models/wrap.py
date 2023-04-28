@@ -219,4 +219,4 @@ def inverse_warp(img, depth, pose, intrinsics, rotation_mode='euler', padding_mo
 
     valid_points = src_pixel_coords.abs().max(dim=-1)[0] <= 1 # [H,W]
 
-    return projected_img, valid_points
+    return projected_img, valid_points,src_pixel_coords

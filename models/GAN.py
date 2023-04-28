@@ -1,6 +1,7 @@
 from models.generator import DepthNet, PoseNet
 from models.discriminator import Discriminator
 from models.wrap import inverse_warp
+from models.cor_loss import CORLoss
 from torchvision.utils import save_image
 import torch
 import numpy as np
@@ -34,15 +35,15 @@ class DPGAN(torch.nn.Module):
         # reproject_left = utils.reproject_pcd(pcd, self.intrinsics, extrinsics_left)
         # reproject_right = utils.reproject_pcd(pcd, self.intrinsics, extrinsics_right)
         # print(pose_right)
-        reproject_left, valid_points = inverse_warp(left, depthMap[:,0], pose_left,
+        reproject_left, valid_points, grid_left = inverse_warp(left, depthMap[:,0], pose_left,
                                                              self.intrinsics,
                                                              rotation_mode='euler', padding_mode='zeros')
         
-        reproject_right, valid_points = inverse_warp(right, depthMap[:,0], pose_right,
+        reproject_right, valid_points, grid_right = inverse_warp(right, depthMap[:,0], pose_right,
                                                              self.intrinsics,
                                                              rotation_mode='euler', padding_mode='zeros')
 
-        return reproject_left, reproject_right
+        return reproject_left, reproject_right, grid_left, grid_right
     
     def train_discriminator(self, optimizer, criterion, reproject, real):
         optimizer.zero_grad()
@@ -61,7 +62,7 @@ class DPGAN(torch.nn.Module):
 
         return loss_real + loss_fake
     
-    def train_generator(self, optimizer1,optimizer2, criterion, construct_loss, left, right, reproject_left, reproject_right):
+    def train_generator(self, optimizer1,optimizer2, criterion, cor_loss, left, right, reproject_left, reproject_right, grid_left, grid_right):
         optimizer1.zero_grad()
         optimizer2.zero_grad()
 
@@ -74,10 +75,11 @@ class DPGAN(torch.nn.Module):
         batch_size = len(prob)
         loss2 = criterion(prob, torch.ones(batch_size,1))
         
-        loss3 = construct_loss(left, reproject_left)
-        loss4 = construct_loss(right,reproject_right)
+        loss3 = cor_loss(grid_left)
+        loss4 = cor_loss(grid_right)
         loss = loss1 + loss2 + loss3 + loss4
         # loss = loss1 + loss2
+        print(loss1,loss2,loss3,loss4)
 
         loss.backward()
         optimizer1.step()
@@ -98,6 +100,7 @@ class DPGAN(torch.nn.Module):
         optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-2)
         optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-2)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-5)
+        cor_loss = CORLoss()
 
         losses_g = []
         losses_d = []
@@ -121,14 +124,16 @@ class DPGAN(torch.nn.Module):
                 right = right[None,:,:,:]
 
                 self.train()
-                reproject_left, reproject_right = self(left, center, right)
+                reproject_left, reproject_right, grid_left, grid_right = self(left, center, right)
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
+                
+                cor_loss(grid_left)
 
                 
                 for j in range(k):
-                    reproject_left, reproject_right = self(left, center, right)
-                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, criterion,construct_loss, left, right, reproject_left, reproject_right)
+                    reproject_left, reproject_right,grid_left,grid_right = self(left, center, right)
+                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, criterion,cor_loss, left, right, reproject_left, reproject_right, grid_left, grid_right)
                     # loss_g += self.train_generator(optimizer_g, criterion, reproject_right)
 
                 depthMap = self.DepthNet(center)
