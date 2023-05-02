@@ -1,7 +1,7 @@
 from models.generator import DepthNet, PoseNet
 from models.discriminator import Discriminator
 from models.wrap import inverse_warp
-from models.cor_loss import CORLoss
+from models.cor_loss import CORLoss, PhotometricLoss, SmoothnessLoss, BLACKLoss
 from torchvision.utils import save_image
 import torch
 import numpy as np
@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import os
 from torchvision import transforms
+import shutil
+from pathlib import Path
+import pandas as pd
 # import open3d as o3d
 
 
@@ -24,22 +27,27 @@ class DPGAN(torch.nn.Module):
         self.intrinsics = torch.tensor([[721.5377, 0, 596.5593],
                                            [0, 721.5377, 149.854],
                                            [0, 0, 1]])
+        # self.intrinsics = torch.tensor([[721.5377/1242, 0, 596.5593/1242],
+        #                                    [0, 721.5377/375, 149.854/375],
+        #                                    [0, 0, 1]])
 
     def forward(self, left, center, right):
         depthMap = self.DepthNet(center)
-        pose_left = self.PoseNet(left, center)    # pose: (1x6)
-        pose_right = self.PoseNet(right, center)    # pose: (1x6)
+        # pose_left = self.PoseNet(left, center)    # pose: (1x6)
+        # pose_right = self.PoseNet(right, center)    # pose: (1x6)
+        
+        pose_left = torch.tensor([[0., 0, -0.0002, 0,0,0]])
+        pose_right = torch.tensor([[0., 0, 0.0002, 0,0,0]])
         # pcd = utils.depth_rgb_to_pcd(depthMap, center,self.intrinsics)
         # extrinsics_left = utils.pose_to_extrinsics(pose_left)
         # extrinsics_right = utils.pose_to_extrinsics(pose_right)
         # reproject_left = utils.reproject_pcd(pcd, self.intrinsics, extrinsics_left)
         # reproject_right = utils.reproject_pcd(pcd, self.intrinsics, extrinsics_right)
-        # print(pose_right)
-        reproject_left, valid_points, grid_left = inverse_warp(left, depthMap[:,0], pose_left,
+        reproject_left, valid_points, grid_left = inverse_warp(center, depthMap[:,0], pose_left,
                                                              self.intrinsics,
                                                              rotation_mode='euler', padding_mode='zeros')
         
-        reproject_right, valid_points, grid_right = inverse_warp(right, depthMap[:,0], pose_right,
+        reproject_right, valid_points, grid_right = inverse_warp(center, depthMap[:,0], pose_right,
                                                              self.intrinsics,
                                                              rotation_mode='euler', padding_mode='zeros')
 
@@ -62,7 +70,7 @@ class DPGAN(torch.nn.Module):
 
         return loss_real + loss_fake
     
-    def train_generator(self, optimizer1,optimizer2, criterion, cor_loss, left, right, reproject_left, reproject_right, grid_left, grid_right):
+    def train_generator(self, optimizer1,optimizer2, criterion, black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depth):
         optimizer1.zero_grad()
         optimizer2.zero_grad()
 
@@ -75,11 +83,15 @@ class DPGAN(torch.nn.Module):
         batch_size = len(prob)
         loss2 = criterion(prob, torch.ones(batch_size,1))
         
-        loss3 = cor_loss(grid_left)
-        loss4 = cor_loss(grid_right)
-        loss = loss1 + loss2 + loss3 + loss4
-        # loss = loss1 + loss2
-        print(loss1,loss2,loss3,loss4)
+        # loss3 = black_loss(left,reproject_left)
+        # loss4 = black_loss(right,reproject_right)
+        
+        loss5 = photo_loss(left,reproject_left)
+        loss6 = photo_loss(right,reproject_right)
+        loss7 = smooth_loss(depth)
+        loss = loss1 + loss2 + 100*loss5 + 100*loss6 + loss7
+        # loss = loss1 + loss2 + loss5 + loss6 + loss7
+        # print(loss5, loss6, loss7)
 
         loss.backward()
         optimizer1.step()
@@ -96,16 +108,24 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        construct_loss = torch.nn.L1Loss()
-        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-2)
+        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-5)
         optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-2)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-5)
         cor_loss = CORLoss()
+        photo_loss = PhotometricLoss()
+        # photo_loss = torch.nn.L1Loss()
+        smooth_loss = SmoothnessLoss()
+        black_loss = BLACKLoss()
 
         losses_g = []
         losses_d = []
+        
+        if os.path.exists('./output'):
+            shutil.rmtree('./output')
+        Path('./output').mkdir(exist_ok=True)
 
         for epoch in range(epochs):
+            
             self.DepthNet.train()
             self.PoseNet.train()
             self.Discriminator.train()
@@ -128,17 +148,16 @@ class DPGAN(torch.nn.Module):
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
                 
-                cor_loss(grid_left)
 
                 
                 for j in range(k):
+                    depthMap = self.DepthNet(center)
                     reproject_left, reproject_right,grid_left,grid_right = self(left, center, right)
-                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, criterion,cor_loss, left, right, reproject_left, reproject_right, grid_left, grid_right)
+                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, criterion,black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depthMap)
                     # loss_g += self.train_generator(optimizer_g, criterion, reproject_right)
 
-                depthMap = self.DepthNet(center)
                 
-                save_image(depthMap, f"./output/depthMap_img{epoch}.png")
+                save_image(depthMap/255, f"./output/depthMap_img{epoch}.png")
                 save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
                 save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
 

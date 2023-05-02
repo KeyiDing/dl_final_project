@@ -63,7 +63,7 @@ class Decoder(torch.nn.Module):
 		x = self.conv5(x)
 		x = self.conv6(x)
 		x = self.out(x)
-
+		
 		return x
 	
 class DepthNet(torch.nn.Module):
@@ -71,13 +71,13 @@ class DepthNet(torch.nn.Module):
 		super().__init__()
 		self.encoder = Encoder()
 		self.decoder = Decoder()
-		self.out = torch.nn.Sigmoid()
 	
 	def forward(self, x):
 		x = self.encoder(x)
 		x = self.decoder(x)
+		# print('nw min',torch.min(x* 255))
 
-		return x
+		return x * 255
 	
 class PoseNet(torch.nn.Module):
 	def __init__(self) -> None:
@@ -85,11 +85,15 @@ class PoseNet(torch.nn.Module):
 		self.encoder = Encoder()
 		self.encoder.conv1 = conv(in_size=6, out_size=32, padding=1)
 		self.linear1 = torch.nn.Linear(in_features=116736, out_features=512)
+		torch.nn.init.xavier_uniform(self.linear1.weight)
 		self.linear2 = torch.nn.Linear(in_features=512, out_features=128)
+		torch.nn.init.xavier_uniform(self.linear2.weight)
 		self.linear3 = torch.nn.Linear(in_features=128, out_features=64)
+		torch.nn.init.xavier_uniform(self.linear3.weight)
 		self.linear4 = torch.nn.Linear(in_features=64, out_features=6)
+		torch.nn.init.xavier_uniform(self.linear4.weight)
 		self.activation = torch.nn.LeakyReLU()
-		self.activation1 = torch.nn.Tanh()
+		self.activation1 = torch.nn.Hardtanh(min_val=-np.pi,max_val=np.pi)
   		
 	def forward(self, other,center):
 		x = torch.cat([other,center],dim=1)
@@ -100,6 +104,11 @@ class PoseNet(torch.nn.Module):
 		x3= self.linear2(x2)
 		x4 = self.linear3(x3)
 		x5 = self.linear4(x4)
+		x6 = torch.ones(x5.shape)
+		x6[:,3:6] = self.activation1(x5[:,3:6])
+		x6[:,0:3] = self.activation1(x5[:,0:3])
+		print('x6',x6)
 
-		return 0.01 * self.activation1(x5)
+		# return self.activation1(x5)
+		return x5
 
