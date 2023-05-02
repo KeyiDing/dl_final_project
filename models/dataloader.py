@@ -23,13 +23,14 @@ class DepthDataset(Dataset):
     #         print('op should be either train, val or test!')
         
     def __len__(self):
-        return len(self.images) // 3
+        return len(self.images) // 3 - 1
         # return len(next(os.walk(self.data_dir))[1])
     
     def __getitem__(self, idx):
-        left = Image.open(os.path.join(self.root_dir, self.images[idx * 3]))
-        middle = Image.open(os.path.join(self.root_dir, self.images[idx * 3 + 1]))
-        right = Image.open(os.path.join(self.root_dir, self.images[idx * 3 + 2]))
+        idx += 1
+        left = Image.open(os.path.join(self.root_dir, self.images[idx]))
+        middle = Image.open(os.path.join(self.root_dir, self.images[idx + 1]))
+        right = Image.open(os.path.join(self.root_dir, self.images[idx + 2]))
         data = {"left": np.array(left), "middle": np.array(middle), "right": np.array(right)}
         return data
         #img_name = str(idx) + '_input.jpg'
