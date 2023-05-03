@@ -196,8 +196,8 @@ class DPGAN(torch.nn.Module):
                 losses_g.append(epoch_loss_g)
                 losses_d.append(epoch_loss_d)
 
-                print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
-                print("---------------------------------------------------------")
+        print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
+        print("---------------------------------------------------------")
 
         # torch.save(self.state_dict())
 
