@@ -22,13 +22,14 @@ import models.utils as utils
 class DPGAN(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
-
+        device = 'cuda'
         self.DepthNet = DepthNet()
         self.PoseNet = PoseCNN(2)
         self.Discriminator = Discriminator()
         self.intrinsics = torch.tensor([[721.5377, 0, 596.5593],
                                            [0, 721.5377, 149.854],
                                            [0, 0, 1]])
+        self.intrinsics = self.intrinsics.to('cuda')
         # self.intrinsics = torch.tensor([[721.5377/1242, 0, 596.5593/1242],
         #                                    [0, 721.5377/375, 149.854/375],
         #                                    [0, 0, 1]])
@@ -38,7 +39,6 @@ class DPGAN(torch.nn.Module):
         pose_left = self.PoseNet(left, center)    # pose: (1x6)
         pose_right = self.PoseNet(right, center)    # pose: (1x6)
         
-        print(pose_left)
         
         # pose_left = torch.tensor([[0., 0, 25, 0,0,0]])
         # pose_right = torch.tensor([[0., 0, 50, 0,0,0]])
@@ -64,9 +64,9 @@ class DPGAN(torch.nn.Module):
         prob_real = self.Discriminator(real)
         batch_size = len(prob_fake)
 
-        loss_real = criterion(prob_real, torch.ones(batch_size, 1))
+        loss_real = criterion(prob_real, torch.ones(batch_size, 1).to('cuda'))
 
-        loss_fake = criterion(prob_fake, torch.zeros(batch_size, 1))
+        loss_fake = criterion(prob_fake, torch.zeros(batch_size, 1).to('cuda'))
 
         loss_real.backward()
         loss_fake.backward(retain_graph=True)
@@ -80,12 +80,12 @@ class DPGAN(torch.nn.Module):
 
         # prob = self.Discriminator(reproject_left)
         # batch_size = len(prob)
-        # loss1 = criterion(prob, torch.ones(batch_size,1))
+        # loss1 = criterion(prob, torch.ones(batch_size,1).to('cuda'))
 
 
         # prob = self.Discriminator(reproject_right)
         # batch_size = len(prob)
-        # loss2 = criterion(prob, torch.ones(batch_size,1))
+        # loss2 = criterion(prob, torch.ones(batch_size,1).to('cuda'))
         
         # loss3 = black_loss(left,reproject_left)
         # loss4 = black_loss(right,reproject_right)
@@ -128,9 +128,9 @@ class DPGAN(torch.nn.Module):
         losses_g = []
         losses_d = []
         
-        if os.path.exists('./output'):
-            shutil.rmtree('./output')
-        Path('./output').mkdir(exist_ok=True)
+        # if os.path.exists('./output'):
+        #     shutil.rmtree('./output')
+        # Path('./output').mkdir(exist_ok=True)
 
         for epoch in range(epochs):
             
@@ -139,33 +139,33 @@ class DPGAN(torch.nn.Module):
             self.Discriminator.train()
 
             # convert_tensor = transforms.ToTensor()
-            convert_tensor = transforms.Compose([
-                transforms.Resize((352,1216)),
-                transforms.ToTensor(),
-            ])
-            left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
-            center = center[None,:,:,:]
-            depthMap = self.DepthNet(center)
+            # convert_tensor = transforms.Compose([
+            #     transforms.Resize((352,1216)),
+            #     transforms.ToTensor(),
+            # ])
+            # left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
+            # center = center[None,:,:,:]
+            # depthMap = self.DepthNet(center)
 
-            utils.save_img(depthMap, "start")
+            # utils.save_img(depthMap, "start")
 
             loss_g = 0.0
             loss_d = 0.0
             print(f"Training epoch {epoch} of {epochs}")
 
-            # for i, data in enumerate(train_loader):
-            #     left, center, right = data[0], data[1], data[2]
-            for i in range(1):
+            for i, data in enumerate(train_loader):
+                left, center, right = data['left'].to('cuda:0'), data['middle'].to('cuda:0'), data['right'].to('cuda:0')
+            # for i in range(1):
                 
-                left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
-                left = left[None,:,:,:]
-                center = center[None,:,:,:]
-                right = right[None,:,:,:]
+            #     left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
+            #     left = left[None,:,:,:]
+            #     center = center[None,:,:,:]
+            #     right = right[None,:,:,:]
 
                 self.train()
                 reproject_left, reproject_right, grid_left, grid_right = self(left, center, right)
-                utils.save_img(reproject_left, f"reproject_left_{epoch}")
-                utils.save_img(left, "left")
+                # utils.save_img(reproject_left, f"reproject_left_{epoch}")
+                # utils.save_img(left, "left")
                 
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
@@ -181,9 +181,9 @@ class DPGAN(torch.nn.Module):
                 depthMap = self.DepthNet(center)
                 print(torch.mean(depthMap), torch.std(depthMap))
                 
-                utils.save_img(depthMap, epoch)
-                save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
-                save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
+                # utils.save_img(depthMap, epoch)
+                # save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
+                # save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
 
                 epoch_loss_g = loss_g / 1
                 epoch_loss_d = loss_d / 1
