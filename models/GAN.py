@@ -1,4 +1,4 @@
-from models.generator import DepthNet, PoseNet
+from models.generator import DepthNet, PoseNet, PoseCNN
 from models.discriminator import Discriminator
 from models.wrap import inverse_warp
 from models.cor_loss import CORLoss, PhotometricLoss, SmoothnessLoss, BLACKLoss
@@ -24,7 +24,7 @@ class DPGAN(torch.nn.Module):
         super().__init__()
 
         self.DepthNet = DepthNet()
-        self.PoseNet = PoseNet()
+        self.PoseNet = PoseCNN(2)
         self.Discriminator = Discriminator()
         self.intrinsics = torch.tensor([[721.5377, 0, 596.5593],
                                            [0, 721.5377, 149.854],
@@ -37,6 +37,8 @@ class DPGAN(torch.nn.Module):
         depthMap = self.DepthNet(center)
         pose_left = self.PoseNet(left, center)    # pose: (1x6)
         pose_right = self.PoseNet(right, center)    # pose: (1x6)
+        
+        print(pose_left)
         
         # pose_left = torch.tensor([[0., 0, 25, 0,0,0]])
         # pose_right = torch.tensor([[0., 0, 50, 0,0,0]])
@@ -90,7 +92,7 @@ class DPGAN(torch.nn.Module):
         
         # loss5 = photo_loss(left,reproject_left)
         # loss6 = photo_loss(right,reproject_right)
-        # loss7 = smooth_loss(depth)
+        loss7 = smooth_loss(depth)
         # loss = loss1 + loss2 + 100*loss5 + 100*loss6 + loss7
         # loss = loss1 + loss2 + loss5 + loss6 + loss7
         # print(loss5, loss6, loss7)
@@ -114,8 +116,8 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-4)
-        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-4)
+        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-5)
+        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-5)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-4)
         cor_loss = CORLoss()
         photo_loss = PhotometricLoss()
@@ -141,7 +143,7 @@ class DPGAN(torch.nn.Module):
                 transforms.Resize((352,1216)),
                 transforms.ToTensor(),
             ])
-            left, center, right = convert_tensor(Image.open("./images/4.jpg")), convert_tensor(Image.open("./images/3.jpg")), convert_tensor(Image.open("./images/5.jpg"))
+            left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
             center = center[None,:,:,:]
             depthMap = self.DepthNet(center)
 
@@ -155,7 +157,7 @@ class DPGAN(torch.nn.Module):
             #     left, center, right = data[0], data[1], data[2]
             for i in range(1):
                 
-                left, center, right = convert_tensor(Image.open("./images/4.jpg")), convert_tensor(Image.open("./images/3.jpg")), convert_tensor(Image.open("./images/5.jpg"))
+                left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
                 left = left[None,:,:,:]
                 center = center[None,:,:,:]
                 right = right[None,:,:,:]
