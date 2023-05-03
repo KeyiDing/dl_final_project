@@ -13,6 +13,8 @@ from torchvision import transforms
 import shutil
 from pathlib import Path
 import pandas as pd
+import models.utils as utils
+
 # import open3d as o3d
 
 
@@ -33,11 +35,11 @@ class DPGAN(torch.nn.Module):
 
     def forward(self, left, center, right):
         depthMap = self.DepthNet(center)
-        # pose_left = self.PoseNet(left, center)    # pose: (1x6)
-        # pose_right = self.PoseNet(right, center)    # pose: (1x6)
+        pose_left = self.PoseNet(left, center)    # pose: (1x6)
+        pose_right = self.PoseNet(right, center)    # pose: (1x6)
         
-        pose_left = torch.tensor([[0., 0, -0.0002, 0,0,0]])
-        pose_right = torch.tensor([[0., 0, 0.0002, 0,0,0]])
+        # pose_left = torch.tensor([[0., 0, 25, 0,0,0]])
+        # pose_right = torch.tensor([[0., 0, 50, 0,0,0]])
         # pcd = utils.depth_rgb_to_pcd(depthMap, center,self.intrinsics)
         # extrinsics_left = utils.pose_to_extrinsics(pose_left)
         # extrinsics_right = utils.pose_to_extrinsics(pose_right)
@@ -70,29 +72,33 @@ class DPGAN(torch.nn.Module):
 
         return loss_real + loss_fake
     
-    def train_generator(self, optimizer1,optimizer2, criterion, black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depth):
+    def train_generator(self, optimizer1,optimizer2, l1_loss, black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depth):
         optimizer1.zero_grad()
         optimizer2.zero_grad()
 
-        prob = self.Discriminator(reproject_left)
-        batch_size = len(prob)
-        loss1 = criterion(prob, torch.ones(batch_size,1))
+        # prob = self.Discriminator(reproject_left)
+        # batch_size = len(prob)
+        # loss1 = criterion(prob, torch.ones(batch_size,1))
 
 
-        prob = self.Discriminator(reproject_right)
-        batch_size = len(prob)
-        loss2 = criterion(prob, torch.ones(batch_size,1))
+        # prob = self.Discriminator(reproject_right)
+        # batch_size = len(prob)
+        # loss2 = criterion(prob, torch.ones(batch_size,1))
         
         # loss3 = black_loss(left,reproject_left)
         # loss4 = black_loss(right,reproject_right)
         
-        loss5 = photo_loss(left,reproject_left)
-        loss6 = photo_loss(right,reproject_right)
-        loss7 = smooth_loss(depth)
-        loss = loss1 + loss2 + 100*loss5 + 100*loss6 + loss7
+        # loss5 = photo_loss(left,reproject_left)
+        # loss6 = photo_loss(right,reproject_right)
+        # loss7 = smooth_loss(depth)
+        # loss = loss1 + loss2 + 100*loss5 + 100*loss6 + loss7
         # loss = loss1 + loss2 + loss5 + loss6 + loss7
         # print(loss5, loss6, loss7)
 
+        loss1 = photo_loss(left, reproject_left)
+        loss2 = photo_loss(right, reproject_right)
+
+        loss = loss1 + loss2
         loss.backward()
         optimizer1.step()
         optimizer2.step()
@@ -108,14 +114,14 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-5)
-        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-2)
-        optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-5)
+        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-4)
+        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-4)
+        optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-4)
         cor_loss = CORLoss()
         photo_loss = PhotometricLoss()
-        # photo_loss = torch.nn.L1Loss()
         smooth_loss = SmoothnessLoss()
         black_loss = BLACKLoss()
+        l1_loss = torch.nn.L1Loss()
 
         losses_g = []
         losses_d = []
@@ -130,6 +136,17 @@ class DPGAN(torch.nn.Module):
             self.PoseNet.train()
             self.Discriminator.train()
 
+            # convert_tensor = transforms.ToTensor()
+            convert_tensor = transforms.Compose([
+                transforms.Resize((352,1216)),
+                transforms.ToTensor(),
+            ])
+            left, center, right = convert_tensor(Image.open("./images/4.jpg")), convert_tensor(Image.open("./images/3.jpg")), convert_tensor(Image.open("./images/5.jpg"))
+            center = center[None,:,:,:]
+            depthMap = self.DepthNet(center)
+
+            utils.save_img(depthMap, "start")
+
             loss_g = 0.0
             loss_d = 0.0
             print(f"Training epoch {epoch} of {epochs}")
@@ -137,14 +154,17 @@ class DPGAN(torch.nn.Module):
             # for i, data in enumerate(train_loader):
             #     left, center, right = data[0], data[1], data[2]
             for i in range(1):
-                convert_tensor = transforms.ToTensor()
-                left, center, right = convert_tensor(Image.open("./images/2.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/0.png"))
+                
+                left, center, right = convert_tensor(Image.open("./images/4.jpg")), convert_tensor(Image.open("./images/3.jpg")), convert_tensor(Image.open("./images/5.jpg"))
                 left = left[None,:,:,:]
                 center = center[None,:,:,:]
                 right = right[None,:,:,:]
 
                 self.train()
                 reproject_left, reproject_right, grid_left, grid_right = self(left, center, right)
+                utils.save_img(reproject_left, f"reproject_left_{epoch}")
+                utils.save_img(left, "left")
+                
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_left, left)
                 loss_d += self.train_discriminator(optimizer_d, criterion, reproject_right, right)
                 
@@ -153,11 +173,13 @@ class DPGAN(torch.nn.Module):
                 for j in range(k):
                     depthMap = self.DepthNet(center)
                     reproject_left, reproject_right,grid_left,grid_right = self(left, center, right)
-                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, criterion,black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depthMap)
+                    loss_g += self.train_generator(optimizer_depth, optimizer_pose, l1_loss, black_loss, photo_loss, smooth_loss, left, right, reproject_left, reproject_right, grid_left, grid_right, depthMap)
                     # loss_g += self.train_generator(optimizer_g, criterion, reproject_right)
 
+                depthMap = self.DepthNet(center)
+                print(torch.mean(depthMap), torch.std(depthMap))
                 
-                save_image(depthMap/255, f"./output/depthMap_img{epoch}.png")
+                utils.save_img(depthMap, epoch)
                 save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
                 save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
 

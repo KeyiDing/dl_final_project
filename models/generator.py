@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from models.depth_decoder import DepthDecoder
+from models.resnet_encoder import ResnetEncoder
 
 def conv(in_size, out_size, kernel_size=3, padding=0):
 	return torch.nn.Sequential(
@@ -69,15 +71,15 @@ class Decoder(torch.nn.Module):
 class DepthNet(torch.nn.Module):
 	def __init__(self) -> None:
 		super().__init__()
-		self.encoder = Encoder()
-		self.decoder = Decoder()
+		self.encoder = ResnetEncoder(50, True)
+		self.decoder = DepthDecoder(self.encoder.num_ch_enc)
 	
 	def forward(self, x):
 		x = self.encoder(x)
 		x = self.decoder(x)
 		# print('nw min',torch.min(x* 255))
 
-		return x * 255
+		return x[("disp", 0)]*255
 	
 class PoseNet(torch.nn.Module):
 	def __init__(self) -> None:
@@ -109,6 +111,6 @@ class PoseNet(torch.nn.Module):
 		x6[:,0:3] = self.activation1(x5[:,0:3])
 		print('x6',x6)
 
-		# return self.activation1(x5)
-		return x5
+		# return self.activation(x5)
+		return x6
 
