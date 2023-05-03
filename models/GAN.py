@@ -20,9 +20,9 @@ import models.utils as utils
 
  
 class DPGAN(torch.nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, device) -> None:
         super().__init__()
-        self.device = 'cpu'
+        self.device = device
         self.DepthNet = DepthNet()
         self.PoseNet = PoseCNN(2)
         self.Discriminator = Discriminator()
@@ -116,8 +116,8 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-5)
-        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-5)
+        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-4)
+        optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-4)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-4)
         cor_loss = CORLoss()
         photo_loss = PhotometricLoss()
