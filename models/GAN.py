@@ -22,14 +22,14 @@ import models.utils as utils
 class DPGAN(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        device = 'cuda'
+        self.device = 'cpu'
         self.DepthNet = DepthNet()
         self.PoseNet = PoseCNN(2)
         self.Discriminator = Discriminator()
         self.intrinsics = torch.tensor([[721.5377, 0, 596.5593],
                                            [0, 721.5377, 149.854],
                                            [0, 0, 1]])
-        self.intrinsics = self.intrinsics.to('cuda')
+        self.intrinsics = self.intrinsics.to(self.device)
         # self.intrinsics = torch.tensor([[721.5377/1242, 0, 596.5593/1242],
         #                                    [0, 721.5377/375, 149.854/375],
         #                                    [0, 0, 1]])
@@ -64,9 +64,9 @@ class DPGAN(torch.nn.Module):
         prob_real = self.Discriminator(real)
         batch_size = len(prob_fake)
 
-        loss_real = criterion(prob_real, torch.ones(batch_size, 1).to('cuda'))
+        loss_real = criterion(prob_real, torch.ones(batch_size, 1).to(self.device))
 
-        loss_fake = criterion(prob_fake, torch.zeros(batch_size, 1).to('cuda'))
+        loss_fake = criterion(prob_fake, torch.zeros(batch_size, 1).to(self.device))
 
         loss_real.backward()
         loss_fake.backward(retain_graph=True)
@@ -80,12 +80,12 @@ class DPGAN(torch.nn.Module):
 
         # prob = self.Discriminator(reproject_left)
         # batch_size = len(prob)
-        # loss1 = criterion(prob, torch.ones(batch_size,1).to('cuda'))
+        # loss1 = criterion(prob, torch.ones(batch_size,1).to(self.device))
 
 
         # prob = self.Discriminator(reproject_right)
         # batch_size = len(prob)
-        # loss2 = criterion(prob, torch.ones(batch_size,1).to('cuda'))
+        # loss2 = criterion(prob, torch.ones(batch_size,1).to(self.device))
         
         # loss3 = black_loss(left,reproject_left)
         # loss4 = black_loss(right,reproject_right)
@@ -154,7 +154,7 @@ class DPGAN(torch.nn.Module):
             print(f"Training epoch {epoch} of {epochs}")
 
             for i, data in enumerate(train_loader):
-                left, center, right = data['left'].to('cuda:0'), data['middle'].to('cuda:0'), data['right'].to('cuda:0')
+                left, center, right = data['left'].to(self.device), data['middle'].to(self.device), data['right'].to(self.device)
             # for i in range(1):
                 
             #     left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
@@ -196,8 +196,8 @@ class DPGAN(torch.nn.Module):
                 losses_g.append(epoch_loss_g)
                 losses_d.append(epoch_loss_d)
 
-        print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
-        print("---------------------------------------------------------")
+            print(f"Generator loss: {epoch_loss_g}, Discriminator loss: {epoch_loss_d}")
+            print("---------------------------------------------------------")
 
         # torch.save(self.state_dict())
 
