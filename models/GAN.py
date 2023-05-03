@@ -179,7 +179,6 @@ class DPGAN(torch.nn.Module):
                     # loss_g += self.train_generator(optimizer_g, criterion, reproject_right)
 
                 depthMap = self.DepthNet(center)
-                print(torch.mean(depthMap), torch.std(depthMap))
                 
                 # utils.save_img(depthMap, epoch)
                 # save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
