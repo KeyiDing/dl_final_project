@@ -87,8 +87,8 @@ class DPGAN(torch.nn.Module):
         # batch_size = len(prob)
         # loss2 = criterion(prob, torch.ones(batch_size,1).to(self.device))
         
-        # loss3 = black_loss(left,reproject_left)
-        # loss4 = black_loss(right,reproject_right)
+        loss3 = black_loss(left,reproject_left)
+        loss4 = black_loss(right,reproject_right)
         
         # loss5 = photo_loss(left,reproject_left)
         # loss6 = photo_loss(right,reproject_right)
@@ -100,7 +100,7 @@ class DPGAN(torch.nn.Module):
         loss1 = photo_loss(left, reproject_left)
         loss2 = photo_loss(right, reproject_right)
 
-        loss = loss1 + loss2
+        loss = loss1
         loss.backward()
         optimizer1.step()
         optimizer2.step()
@@ -116,11 +116,12 @@ class DPGAN(torch.nn.Module):
         """
 
         criterion = torch.nn.BCELoss()
-        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-4)
+        optimizer_depth = torch.optim.Adam(self.DepthNet.parameters(), lr=1e-3)
         optimizer_pose = torch.optim.Adam(self.PoseNet.parameters(), lr=1e-4)
         optimizer_d = torch.optim.Adam(self.Discriminator.parameters(), lr=1e-4)
         cor_loss = CORLoss()
-        photo_loss = PhotometricLoss()
+        # photo_loss = PhotometricLoss()
+        photo_loss = torch.nn.L1Loss()
         smooth_loss = SmoothnessLoss()
         black_loss = BLACKLoss()
         l1_loss = torch.nn.L1Loss()
@@ -128,9 +129,12 @@ class DPGAN(torch.nn.Module):
         losses_g = []
         losses_d = []
         
-        # if os.path.exists('./output'):
-        #     shutil.rmtree('./output')
-        # Path('./output').mkdir(exist_ok=True)
+        epoch_loss_g=0
+        epoch_loss_d=0
+        
+        if os.path.exists('./output'):
+            shutil.rmtree('./output')
+        Path('./output').mkdir(exist_ok=True)
 
         for epoch in range(epochs):
             
@@ -138,29 +142,29 @@ class DPGAN(torch.nn.Module):
             self.PoseNet.train()
             self.Discriminator.train()
 
-            # convert_tensor = transforms.ToTensor()
-            # convert_tensor = transforms.Compose([
-            #     transforms.Resize((352,1216)),
-            #     transforms.ToTensor(),
-            # ])
-            # left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
-            # center = center[None,:,:,:]
-            # depthMap = self.DepthNet(center)
+            convert_tensor = transforms.ToTensor()
+            convert_tensor = transforms.Compose([
+                transforms.Resize((352,1216)),
+                transforms.ToTensor(),
+            ])
+            left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
+            center = center[None,:,:,:]
+            depthMap = self.DepthNet(center)
 
-            # utils.save_img(depthMap, "start")
+            utils.save_img(depthMap, "start")
 
             loss_g = 0.0
             loss_d = 0.0
             print(f"Training epoch {epoch} of {epochs}")
 
-            for i, data in enumerate(train_loader):
-                left, center, right = data['left'].to(self.device), data['middle'].to(self.device), data['right'].to(self.device)
-            # for i in range(1):
+            # for i, data in enumerate(train_loader):
+            #     left, center, right = data['left'].to(self.device), data['middle'].to(self.device), data['right'].to(self.device)
+            for i in range(1):
                 
-            #     left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
-            #     left = left[None,:,:,:]
-            #     center = center[None,:,:,:]
-            #     right = right[None,:,:,:]
+                left, center, right = convert_tensor(Image.open("./images/0.png")), convert_tensor(Image.open("./images/1.png")), convert_tensor(Image.open("./images/2.png"))
+                left = left[None,:,:,:]
+                center = center[None,:,:,:]
+                right = right[None,:,:,:]
 
                 self.train()
                 reproject_left, reproject_right, grid_left, grid_right = self(left, center, right)
@@ -180,9 +184,9 @@ class DPGAN(torch.nn.Module):
 
                 depthMap = self.DepthNet(center)
                 
-                # utils.save_img(depthMap, epoch)
-                # save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
-                # save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
+                utils.save_img(depthMap, epoch)
+                save_image(reproject_left[0], f"./output/reproject_left_img{epoch}.png")
+                save_image(reproject_right[0], f"./output/reproject_right_img{epoch}.png")
 
                 epoch_loss_g = loss_g / 1
                 epoch_loss_d = loss_d / 1

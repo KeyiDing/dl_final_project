@@ -20,11 +20,11 @@ class DepthDataset(Dataset):
         return len(self.images) // 3 - 1
     
     def __getitem__(self, idx):
-        idx += 1
         left = Image.open(os.path.join(self.root_dir, self.images[idx]))
         middle = Image.open(os.path.join(self.root_dir, self.images[idx + 1]))
         right = Image.open(os.path.join(self.root_dir, self.images[idx + 2]))
         data = {"left": self.img_transform(np.array(left)), "middle":  self.img_transform(np.array(middle)), "right": self.img_transform(np.array(right))}
+        idx += 1
         return data
     
     def img_transform(self, img):
